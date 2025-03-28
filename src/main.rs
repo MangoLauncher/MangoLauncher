@@ -12,6 +12,8 @@ use std::io;
 
 mod app;
 mod ui;
+mod version;
+mod java;
 
 use app::{App, AppState, Focus};
 
@@ -25,7 +27,8 @@ async fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // Create app and run it
-    let app = App::new();
+    let mut app = App::new();
+    app.init().await?;
     let res = run_app(&mut terminal, app);
 
     // Restore terminal
@@ -46,7 +49,7 @@ async fn main() -> Result<()> {
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> Result<()> {
     loop {
-        terminal.draw(|f| ui::draw(f, &mut app))?;
+        terminal.draw(|f| ui::draw(f, &app))?;
         handle_events(&mut app)?;
         if app.should_quit {
             break;
@@ -97,16 +100,6 @@ fn handle_key_event(key_event: KeyEvent, app: &mut App) -> io::Result<()> {
         KeyCode::Char('l') | KeyCode::Char('L') => {
             app.toggle_language();
         }
-        KeyCode::Left => {
-            if app.current_state == AppState::Settings {
-                app.adjust_left_panel(false);
-            }
-        }
-        KeyCode::Right => {
-            if app.current_state == AppState::Settings {
-                app.adjust_left_panel(true);
-            }
-        }
         KeyCode::Tab => {
             if app.current_state == AppState::VersionSelect {
                 app.version_manager.toggle_view();
@@ -148,20 +141,20 @@ fn handle_enter(app: &mut App) {
         AppState::MainMenu => {
             if let Some(selected) = app.state.selected() {
                 match selected {
-                    0 => app.current_state = AppState::VersionSelect,
-                    1 => app.current_state = AppState::ProfileSelect,
-                    2 => app.current_state = AppState::Settings,
-                    3 => app.current_state = AppState::Changelog,
-                    4 => {
+                    0 => {
                         // Запуск игры
                         if let Some(profile) = app.current_profile.as_ref() {
                             if let Some(profile) = app.profiles.get(profile) {
                                 if let Some(version) = &profile.selected_version {
-                                    println!("Launching Minecraft {} with profile {}", version, profile.name);
+                                    println!("Launching Minecraft {} with profile {}", version, profile.username);
                                 }
                             }
                         }
                     }
+                    1 => app.current_state = AppState::VersionSelect,
+                    2 => app.current_state = AppState::ProfileSelect,
+                    3 => app.current_state = AppState::Settings,
+                    4 => app.current_state = AppState::Changelog,
                     _ => {}
                 }
                 app.state.select(Some(0));
