@@ -46,21 +46,34 @@ jobs:
     - name: Build binary
       run: cargo build --verbose --release --target ${{ matrix.target }}
 
-    - name: Prepare artifact
+    - name: Package Binary
       shell: bash
       run: |
-        mkdir -p artifact
+        staging="mango-launcher-${{ matrix.target }}"
+        mkdir -p "$staging"
+        
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "artifact/mango-launcher-${{ matrix.target }}.exe"
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "$staging/"
+          7z a "$staging.zip" "./$staging/"
         else
-          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "artifact/mango-launcher-${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "$staging/"
+          tar -czf "$staging.tar.gz" "$staging"
         fi
 
-    - name: Upload artifact
+    - name: Upload Artifact (Windows)
+      if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v3
       with:
-        name: binaries-${{ matrix.target }}
-        path: artifact/*
+        name: ${{ matrix.target }}
+        path: mango-launcher-${{ matrix.target }}.zip
+        if-no-files-found: error
+
+    - name: Upload Artifact (Unix)
+      if: matrix.os != 'windows-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.target }}
+        path: mango-launcher-${{ matrix.target }}.tar.gz
         if-no-files-found: error
 
   release:
@@ -70,15 +83,18 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v3
-        with:
-          path: artifacts
+
+      - name: List artifacts
+        run: ls -R
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/**/*
+          files: |
+            */*.zip
+            */*.tar.gz
           draft: false
           prerelease: ${{ contains(github.ref, '-pre') }}
         env:
