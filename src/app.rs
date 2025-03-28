@@ -32,6 +32,7 @@ pub enum AppState {
     VersionSelect,
     ProfileSelect,
     ProfileEdit,
+    Settings,
     Changelog,
 }
 
@@ -39,24 +40,51 @@ pub enum AppState {
 pub enum Focus {
     Menu,
     Input,
+    List,
 }
 
-const MANGO_ART: &[&str] = &[
-    r"    __  ___      _       __  ",
-    r"   /  |/  /___ _(_)___  / /_ ",
-    r"  / /|_/ / __ `/ / __ \/ __/ ",
-    r" / /  / / /_/ / / / / / /_   ",
-    r" \_/  /_/\__,_/_/_/ /_/\__/  ",
+pub const MANGO_ART: &[&str] = &[
+    r"     ,,,",
+    r"   ,'   `.",
+    r"  /       \",
+    r" |  Mango |",
+    r"  \       /",
+    r"   `.   ,'",
+    r"     ```",
 ];
 
-const MOTDS: &[&str] = &[
-    "Добро пожаловать в Mango Launcher!",
-    "Welcome to Mango Launcher!",
-    "Mango - вкусный лаунчер для Minecraft",
-    "Mango - delicious Minecraft launcher",
-    "Создано с любовью к Minecraft",
-    "Made with love for Minecraft",
+pub const MOTDS: &[&str] = &[
+    "Добро пожаловать в Mango Launcher! 🥭",
+    "Welcome to Mango Launcher! 🥭",
+    "Mango - вкусный лаунчер для Minecraft 🥭",
+    "Mango - delicious Minecraft launcher 🥭",
+    "Создано с любовью к Minecraft ❤️",
+    "Made with love for Minecraft ❤️",
+    "Сладкий как манго, быстрый как молния ⚡",
+    "Sweet as mango, fast as lightning ⚡",
+    "Ваш любимый лаунчер для Minecraft 🎮",
+    "Your favorite Minecraft launcher 🎮",
+    "Свежий как манго, надежный как камень 🪨",
+    "Fresh as mango, reliable as stone 🪨",
+    "Создан для геймеров, от геймеров 🎮",
+    "Made by gamers, for gamers 🎮",
+    "Сладкий вкус Minecraft 🍯",
+    "Sweet taste of Minecraft 🍯",
 ];
+
+pub struct Settings {
+    pub left_panel_width: u16,
+    pub language: Language,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            left_panel_width: 25,
+            language: Language::Russian,
+        }
+    }
+}
 
 pub struct App {
     pub should_quit: bool,
@@ -71,6 +99,7 @@ pub struct App {
     pub last_motd_update: DateTime<Local>,
     pub current_motd: String,
     pub art_rotation: f32,
+    pub settings: Settings,
 }
 
 impl App {
@@ -90,7 +119,7 @@ impl App {
             },
         );
 
-        Self {
+        let mut app = Self {
             should_quit: false,
             versions: VecDeque::new(),
             state,
@@ -99,11 +128,14 @@ impl App {
             profiles,
             current_profile: Some("Default".to_string()),
             loading: false,
-            focus: Focus::Menu,
+            focus: Focus::List,
             last_motd_update: Local::now(),
             current_motd: MOTDS[0].to_string(),
             art_rotation: 0.0,
-        }
+            settings: Settings::default(),
+        };
+        app.update_motd();
+        app
     }
 
     pub fn next(&mut self) {
@@ -149,6 +181,7 @@ impl App {
             Language::Russian => Language::English,
             Language::English => Language::Russian,
         };
+        self.settings.language = self.language;
     }
 
     pub fn toggle_focus(&mut self) {
@@ -174,6 +207,14 @@ impl App {
         self.art_rotation += 0.1;
         if self.art_rotation >= 360.0 {
             self.art_rotation = 0.0;
+        }
+    }
+
+    pub fn adjust_left_panel(&mut self, increase: bool) {
+        if increase && self.settings.left_panel_width < 50 {
+            self.settings.left_panel_width += 1;
+        } else if !increase && self.settings.left_panel_width > 20 {
+            self.settings.left_panel_width -= 1;
         }
     }
 } 

@@ -72,6 +72,16 @@ fn handle_events(app: &mut App) -> Result<()> {
                 KeyCode::Enter => handle_enter(app),
                 KeyCode::Esc => handle_escape(app),
                 KeyCode::Char(c) => handle_char_input(app, c),
+                KeyCode::Left => {
+                    if app.current_state == AppState::Settings {
+                        app.adjust_left_panel(false);
+                    }
+                }
+                KeyCode::Right => {
+                    if app.current_state == AppState::Settings {
+                        app.adjust_left_panel(true);
+                    }
+                }
                 _ => {}
             }
         }
@@ -86,8 +96,9 @@ fn handle_enter(app: &mut App) {
                 match selected {
                     0 => app.current_state = AppState::VersionSelect,
                     1 => app.current_state = AppState::ProfileSelect,
-                    2 => app.current_state = AppState::Changelog,
-                    3 => {
+                    2 => app.current_state = AppState::Settings,
+                    3 => app.current_state = AppState::Changelog,
+                    4 => {
                         // TODO: Implement game launch
                         if let Some(profile) = app.current_profile.as_ref() {
                             if let Some(profile) = app.profiles.get(profile) {

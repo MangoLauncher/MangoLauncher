@@ -9,46 +9,57 @@ use ratatui::{
 use crate::app::{App, AppState, Focus, Language, MANGO_ART};
 
 pub fn draw(f: &mut Frame, app: &mut App) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
+    // Разделяем экран на левую и правую части
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
         .margin(1)
         .constraints([
-            Constraint::Length(8),  // ASCII art + MOTD
-            Constraint::Min(0),     // Main content
-            Constraint::Length(3),  // Controls
+            Constraint::Length(app.settings.left_panel_width),  // Ширина из настроек
+            Constraint::Min(0),      // Правая часть для основного контента
         ])
         .split(f.size());
 
-    // ASCII art and MOTD
-    let art_chunks = Layout::default()
+    // Левая часть - ASCII и MOTD
+    let left_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),
-            Constraint::Length(3),
+            Constraint::Length(10),   // ASCII арт + отступы
+            Constraint::Length(4),    // MOTD + отступы
+            Constraint::Min(0),      // Оставшееся пространство
         ])
-        .split(chunks[0]);
+        .split(main_chunks[0]);
 
-    // ASCII art with rotation effect
+    // ASCII арт с эффектом вращения
     let art = Paragraph::new(MANGO_ART.join("\n"))
         .style(Style::default().fg(Color::Yellow))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
-    f.render_widget(art, art_chunks[0]);
+    f.render_widget(art, left_chunks[0]);
 
     // MOTD
-    let motd = Paragraph::new(&app.current_motd)
+    let motd = Paragraph::new(app.current_motd.as_str())
         .style(Style::default().fg(Color::Cyan))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
-    f.render_widget(motd, art_chunks[1]);
+    f.render_widget(motd, left_chunks[1]);
 
-    // Main content
+    // Правая часть - основной контент и футер
+    let right_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),     // Основной контент
+            Constraint::Length(3),  // Футер с управлением
+        ])
+        .split(main_chunks[1]);
+
+    // Основной контент
     match app.current_state {
-        AppState::MainMenu => draw_main_menu(f, app, chunks[1]),
-        AppState::VersionSelect => draw_version_select(f, app, chunks[1]),
-        AppState::ProfileSelect => draw_profile_select(f, app, chunks[1]),
-        AppState::ProfileEdit => draw_profile_edit(f, app, chunks[1]),
-        AppState::Changelog => draw_changelog(f, app, chunks[1]),
+        AppState::MainMenu => draw_main_menu(f, app, right_chunks[0]),
+        AppState::VersionSelect => draw_version_select(f, app, right_chunks[0]),
+        AppState::ProfileSelect => draw_profile_select(f, app, right_chunks[0]),
+        AppState::ProfileEdit => draw_profile_edit(f, app, right_chunks[0]),
+        AppState::Settings => draw_settings(f, app, right_chunks[0]),
+        AppState::Changelog => draw_changelog(f, app, right_chunks[0]),
     }
 
     // Footer with controls
@@ -81,6 +92,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 "Tab: Switch | Enter: Save | Esc: Back | Q: Quit"
             }
         }
+        AppState::Settings => {
+            if app.language == Language::Russian {
+                "Настройки"
+            } else {
+                "Settings"
+            }
+        }
         AppState::Changelog => {
             if app.language == Language::Russian {
                 "Esc: Назад | Q: Выход"
@@ -94,14 +112,15 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         .style(Style::default().fg(Color::White))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
-    f.render_widget(footer, chunks[2]);
+    f.render_widget(footer, right_chunks[1]);
 }
 
 fn draw_main_menu(f: &mut Frame, app: &mut App, area: Rect) {
-    let menu_items = if app.language == Language::Russian {
+    let menu_items = if app.settings.language == Language::Russian {
         vec![
             "Выбрать версию",
             "Профили",
+            "Настройки",
             "Чейнджлог",
             "Запустить игру",
         ]
@@ -109,6 +128,7 @@ fn draw_main_menu(f: &mut Frame, app: &mut App, area: Rect) {
         vec![
             "Select Version",
             "Profiles",
+            "Settings",
             "Changelog",
             "Play Game",
         ]
@@ -226,6 +246,55 @@ fn draw_profile_edit(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_widget(username, chunks[0]);
     f.render_widget(ram, chunks[1]);
     f.render_widget(java_args, chunks[2]);
+}
+
+fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Length(3),
+        ])
+        .split(area);
+
+    let language = Paragraph::new(format!(
+        "{}: {} (L)",
+        if app.settings.language == Language::Russian {
+            "Язык"
+        } else {
+            "Language"
+        },
+        if app.settings.language == Language::Russian {
+            "Русский"
+        } else {
+            "English"
+        }
+    ))
+    .block(Block::default().borders(Borders::ALL));
+
+    let panel_width = Paragraph::new(format!(
+        "{}: {} ({}/{})",
+        if app.settings.language == Language::Russian {
+            "Ширина левой панели"
+        } else {
+            "Left Panel Width"
+        },
+        app.settings.left_panel_width,
+        if app.settings.language == Language::Russian {
+            "←/→"
+        } else {
+            "Left/Right"
+        },
+        if app.settings.language == Language::Russian {
+            "стрелки"
+        } else {
+            "arrows"
+        }
+    ))
+    .block(Block::default().borders(Borders::ALL));
+
+    f.render_widget(language, chunks[0]);
+    f.render_widget(panel_width, chunks[1]);
 }
 
 fn draw_changelog(f: &mut Frame, app: &App, area: Rect) {
