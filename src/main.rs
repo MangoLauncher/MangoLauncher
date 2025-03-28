@@ -1,6 +1,6 @@
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyEvent},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -8,6 +8,7 @@ use ratatui::{
     prelude::*,
     Terminal,
 };
+use std::io;
 
 mod app;
 mod ui;
@@ -63,30 +64,77 @@ fn handle_events(app: &mut App) -> Result<()> {
                 return Ok(());
             }
 
-            match key.code {
-                KeyCode::Char('q') => app.should_quit = true,
-                KeyCode::Char('j') | KeyCode::Down => app.next(),
-                KeyCode::Char('k') | KeyCode::Up => app.previous(),
-                KeyCode::Char('l') => app.toggle_language(),
-                KeyCode::Tab => app.toggle_focus(),
-                KeyCode::Enter => handle_enter(app),
-                KeyCode::Esc => handle_escape(app),
-                KeyCode::Char(c) => handle_char_input(app, c),
-                KeyCode::Left => {
-                    if app.current_state == AppState::Settings {
-                        app.adjust_left_panel(false);
-                    }
-                }
-                KeyCode::Right => {
-                    if app.current_state == AppState::Settings {
-                        app.adjust_left_panel(true);
-                    }
-                }
-                _ => {}
-            }
+            handle_key_event(key, app)?;
         }
     }
     Ok(())
+}
+
+fn handle_key_event(key_event: KeyEvent, app: &mut App) -> io::Result<()> {
+    if app.current_state == AppState::ProfileEdit {
+        match key_event.code {
+            KeyCode::Esc => handle_escape(app),
+            KeyCode::Char(c) => {
+                if let Some(profile_name) = &app.current_profile {
+                    if let Some(profile) = app.profiles.get_mut(profile_name) {
+                        profile.username.push(c);
+                    }
+                }
+            }
+            KeyCode::Backspace => {
+                if let Some(profile_name) = &app.current_profile {
+                    if let Some(profile) = app.profiles.get_mut(profile_name) {
+                        profile.username.pop();
+                    }
+                }
+            }
+            _ => {}
+        }
+        return Ok(());
+    }
+
+    // Обработка остальных состояний
+    match key_event.code {
+        KeyCode::Char('l') | KeyCode::Char('L') => {
+            app.toggle_language();
+        }
+        KeyCode::Left => {
+            if app.current_state == AppState::Settings {
+                app.adjust_left_panel(false);
+            }
+        }
+        KeyCode::Right => {
+            if app.current_state == AppState::Settings {
+                app.adjust_left_panel(true);
+            }
+        }
+        KeyCode::Up | KeyCode::Char('k') => app.previous(),
+        KeyCode::Down | KeyCode::Char('j') => app.next(),
+        KeyCode::Tab => app.toggle_focus(),
+        KeyCode::Enter => handle_enter(app),
+        KeyCode::Esc => handle_escape(app),
+        _ => {}
+    }
+    Ok(())
+}
+
+fn handle_escape(app: &mut App) {
+    match app.current_state {
+        AppState::MainMenu => {
+            app.should_quit = true;
+        }
+        AppState::ProfileEdit => {
+            // Сохраняем изменения при выходе из редактирования профиля
+            app.save_profile();
+            app.current_state = AppState::ProfileSelect;
+            app.focus = Focus::Menu;
+        }
+        AppState::VersionSelect | AppState::ProfileSelect | AppState::Settings | AppState::Changelog => {
+            app.current_state = AppState::MainMenu;
+            app.state.select(Some(0));
+            app.focus = Focus::Menu;
+        }
+    }
 }
 
 fn handle_enter(app: &mut App) {
@@ -99,7 +147,7 @@ fn handle_enter(app: &mut App) {
                     2 => app.current_state = AppState::Settings,
                     3 => app.current_state = AppState::Changelog,
                     4 => {
-                        // TODO: Implement game launch
+                        // Запуск игры
                         if let Some(profile) = app.current_profile.as_ref() {
                             if let Some(profile) = app.profiles.get(profile) {
                                 if let Some(version) = &profile.selected_version {
@@ -119,6 +167,7 @@ fn handle_enter(app: &mut App) {
                     if let Some(profile) = app.current_profile.as_ref() {
                         if let Some(profile) = app.profiles.get_mut(profile) {
                             profile.selected_version = Some(version.id.clone());
+                            app.current_state = AppState::MainMenu;
                         }
                     }
                 }
@@ -129,36 +178,10 @@ fn handle_enter(app: &mut App) {
                 if let Some((name, _)) = app.profiles.iter().nth(selected) {
                     app.current_profile = Some(name.clone());
                     app.current_state = AppState::ProfileEdit;
+                    app.focus = Focus::Input;
                 }
             }
         }
-        AppState::ProfileEdit => {
-            app.current_state = AppState::MainMenu;
-        }
-        AppState::Settings => {
-            // В настройках Enter не используется
-        }
-        AppState::Changelog => {}
-    }
-}
-
-fn handle_escape(app: &mut App) {
-    match app.current_state {
-        AppState::MainMenu => {}
-        AppState::VersionSelect | AppState::ProfileSelect | AppState::ProfileEdit | AppState::Settings | AppState::Changelog => {
-            app.current_state = AppState::MainMenu;
-            app.state.select(Some(0));
-            app.focus = Focus::Menu;
-        }
-    }
-}
-
-fn handle_char_input(app: &mut App, c: char) {
-    if app.current_state == AppState::ProfileEdit && app.focus == Focus::Input {
-        if let Some(profile) = app.current_profile.as_ref() {
-            if let Some(profile) = app.profiles.get_mut(profile) {
-                profile.username.push(c);
-            }
-        }
+        _ => {}
     }
 } 

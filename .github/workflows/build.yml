@@ -1,0 +1,94 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: mango-launcher
+            asset_name: mango-launcher-linux-amd64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: mango-launcher.exe
+            asset_name: mango-launcher-windows-amd64.exe
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            artifact_name: mango-launcher.exe
+            asset_name: mango-launcher-windows-arm64.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: mango-launcher
+            asset_name: mango-launcher-darwin-amd64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: mango-launcher
+            asset_name: mango-launcher-darwin-arm64
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+        override: true
+
+    - name: Build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose --release --target ${{ matrix.target }}
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ matrix.asset_name }}
+        path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            mango-launcher-linux-amd64/mango-launcher
+            mango-launcher-windows-amd64.exe/mango-launcher.exe
+            mango-launcher-windows-arm64.exe/mango-launcher.exe
+            mango-launcher-darwin-amd64/mango-launcher
+            mango-launcher-darwin-arm64/mango-launcher
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

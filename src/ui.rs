@@ -65,44 +65,44 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let controls = match app.current_state {
         AppState::MainMenu => {
             if app.settings.language == Language::Russian {
-                "↑↓: Навигация | Tab: Переключение | Enter: Выбрать | L: Язык | Esc: Назад | Q: Выход"
+                "↑↓: Навигация | Tab: Переключение | Enter: Выбрать | L: Язык | Esc: Выход"
             } else {
-                "↑↓: Navigate | Tab: Switch | Enter: Select | L: Language | Esc: Back | Q: Quit"
+                "↑↓: Navigate | Tab: Switch | Enter: Select | L: Language | Esc: Exit"
             }
         }
         AppState::VersionSelect => {
             if app.settings.language == Language::Russian {
-                "↑↓: Навигация | Tab: Переключение | Enter: Установить | Esc: Назад | Q: Выход"
+                "↑↓: Навигация | Enter: Установить | Esc: Назад"
             } else {
-                "↑↓: Navigate | Tab: Switch | Enter: Install | Esc: Back | Q: Quit"
+                "↑↓: Navigate | Enter: Install | Esc: Back"
             }
         }
         AppState::ProfileSelect => {
             if app.settings.language == Language::Russian {
-                "↑↓: Навигация | Tab: Переключение | Enter: Выбрать | Esc: Назад | Q: Выход"
+                "↑↓: Навигация | Enter: Редактировать | Esc: Назад"
             } else {
-                "↑↓: Navigate | Tab: Switch | Enter: Select | Esc: Back | Q: Quit"
+                "↑↓: Navigate | Enter: Edit | Esc: Back"
             }
         }
         AppState::ProfileEdit => {
             if app.settings.language == Language::Russian {
-                "Tab: Переключение | Enter: Сохранить | Esc: Назад | Q: Выход"
+                "Введите имя пользователя | Esc: Сохранить и выйти"
             } else {
-                "Tab: Switch | Enter: Save | Esc: Back | Q: Quit"
+                "Enter username | Esc: Save and exit"
             }
         }
         AppState::Settings => {
             if app.settings.language == Language::Russian {
-                "Настройки"
+                "L: Язык | ←/→: Размер панели | Esc: Назад"
             } else {
-                "Settings"
+                "L: Language | ←/→: Panel size | Esc: Back"
             }
         }
         AppState::Changelog => {
             if app.settings.language == Language::Russian {
-                "Esc: Назад | Q: Выход"
+                "Esc: Назад"
             } else {
-                "Esc: Back | Q: Quit"
+                "Esc: Back"
             }
         }
     };

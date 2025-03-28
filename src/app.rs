@@ -226,4 +226,12 @@ impl App {
             self.settings.left_panel_width -= 1;
         }
     }
+
+    pub fn save_profile(&mut self) {
+        if let Some(profile_name) = &self.current_profile {
+            if let Some(_) = self.profiles.get(profile_name) {
+                // Профиль сохранен
+            }
+        }
+    }
 } 
