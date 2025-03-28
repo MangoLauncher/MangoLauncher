@@ -12,7 +12,7 @@ use ratatui::{
 mod app;
 mod ui;
 
-use app::{App, AppState};
+use app::{App, AppState, Focus};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -50,6 +50,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> Result<()> {
         if app.should_quit {
             break;
         }
+        app.update_motd();
+        app.rotate_art();
     }
     Ok(())
 }
@@ -66,8 +68,9 @@ fn handle_events(app: &mut App) -> Result<()> {
                 KeyCode::Char('j') | KeyCode::Down => app.next(),
                 KeyCode::Char('k') | KeyCode::Up => app.previous(),
                 KeyCode::Char('l') => app.toggle_language(),
+                KeyCode::Tab => app.toggle_focus(),
                 KeyCode::Enter => handle_enter(app),
-                KeyCode::Backspace => handle_backspace(app),
+                KeyCode::Esc => handle_escape(app),
                 KeyCode::Char(c) => handle_char_input(app, c),
                 _ => {}
             }
@@ -82,36 +85,66 @@ fn handle_enter(app: &mut App) {
             if let Some(selected) = app.state.selected() {
                 match selected {
                     0 => app.current_state = AppState::VersionSelect,
-                    1 => app.current_state = AppState::ProfileEdit,
+                    1 => app.current_state = AppState::ProfileSelect,
                     2 => app.current_state = AppState::Changelog,
+                    3 => {
+                        // TODO: Implement game launch
+                        if let Some(profile) = app.current_profile.as_ref() {
+                            if let Some(profile) = app.profiles.get(profile) {
+                                if let Some(version) = &profile.selected_version {
+                                    println!("Launching Minecraft {} with profile {}", version, profile.name);
+                                }
+                            }
+                        }
+                    }
                     _ => {}
                 }
                 app.state.select(Some(0));
             }
         }
         AppState::VersionSelect => {
-            // TODO: Implement version installation
+            if let Some(selected) = app.state.selected() {
+                if let Some(version) = app.versions.get(selected) {
+                    if let Some(profile) = app.current_profile.as_ref() {
+                        if let Some(profile) = app.profiles.get_mut(profile) {
+                            profile.selected_version = Some(version.id.clone());
+                        }
+                    }
+                }
+            }
+        }
+        AppState::ProfileSelect => {
+            if let Some(selected) = app.state.selected() {
+                if let Some((name, _)) = app.profiles.iter().nth(selected) {
+                    app.current_profile = Some(name.clone());
+                    app.current_state = AppState::ProfileEdit;
+                }
+            }
         }
         AppState::ProfileEdit => {
-            // TODO: Save profile
             app.current_state = AppState::MainMenu;
         }
         AppState::Changelog => {}
     }
 }
 
-fn handle_backspace(app: &mut App) {
+fn handle_escape(app: &mut App) {
     match app.current_state {
         AppState::MainMenu => {}
-        AppState::VersionSelect | AppState::ProfileEdit | AppState::Changelog => {
+        AppState::VersionSelect | AppState::ProfileSelect | AppState::ProfileEdit | AppState::Changelog => {
             app.current_state = AppState::MainMenu;
             app.state.select(Some(0));
+            app.focus = Focus::Menu;
         }
     }
 }
 
 fn handle_char_input(app: &mut App, c: char) {
-    if app.current_state == AppState::ProfileEdit {
-        app.username.push(c);
+    if app.current_state == AppState::ProfileEdit && app.focus == Focus::Input {
+        if let Some(profile) = app.current_profile.as_ref() {
+            if let Some(profile) = app.profiles.get_mut(profile) {
+                profile.username.push(c);
+            }
+        }
     }
 } 
