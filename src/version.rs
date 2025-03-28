@@ -18,6 +18,12 @@ pub enum VersionType {
     ForgeOptiFine { forge: String, optifine: String },
 }
 
+impl Default for VersionType {
+    fn default() -> Self {
+        Self::Vanilla
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MinecraftVersion {
     pub id: String,
@@ -44,16 +50,30 @@ pub struct Latest {
     pub snapshot: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Version {
+    pub id: String,
+    pub r#type: VersionType,
+    pub installed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum VersionView {
+    Recent,
+    All,
+    Modded,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VersionHistory {
-    pub recent_versions: VecDeque<String>,
+    pub recent_versions: Vec<String>,
     pub last_used: std::collections::HashMap<String, DateTime<Utc>>,
 }
 
 impl Default for VersionHistory {
     fn default() -> Self {
         Self {
-            recent_versions: VecDeque::with_capacity(RECENT_VERSIONS_LIMIT),
+            recent_versions: Vec::new(),
             last_used: std::collections::HashMap::new(),
         }
     }
@@ -64,13 +84,6 @@ pub struct VersionManager {
     manifest: Option<VersionManifest>,
     history: VersionHistory,
     current_view: VersionView,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum VersionView {
-    Recent,
-    All,
-    Modded,
 }
 
 impl VersionManager {
@@ -122,51 +135,42 @@ impl VersionManager {
         };
     }
 
-    pub fn get_current_versions(&self) -> Vec<MinecraftVersion> {
+    pub fn get_current_versions(&self) -> Vec<Version> {
         match self.current_view {
-            VersionView::Recent => self.get_recent_versions(),
-            VersionView::All => self.get_all_versions(),
-            VersionView::Modded => self.get_modded_versions(),
+            VersionView::Recent => {
+                self.history.recent_versions
+                    .iter()
+                    .map(|id| Version {
+                        id: id.clone(),
+                        r#type: VersionType::Vanilla,
+                        installed: self.is_version_installed(id),
+                    })
+                    .collect()
+            }
+            VersionView::All => {
+                // TODO: Загрузить все версии из манифеста
+                vec![]
+            }
+            VersionView::Modded => {
+                // TODO: Загрузить модифицированные версии
+                vec![]
+            }
         }
-    }
-
-    fn get_recent_versions(&self) -> Vec<MinecraftVersion> {
-        let all_versions = self.get_all_versions();
-        self.history.recent_versions
-            .iter()
-            .filter_map(|id| {
-                all_versions.iter()
-                    .find(|v| &v.id == id)
-                    .cloned()
-            })
-            .collect()
-    }
-
-    fn get_all_versions(&self) -> Vec<MinecraftVersion> {
-        self.manifest
-            .as_ref()
-            .map(|m| m.versions.clone())
-            .unwrap_or_default()
-    }
-
-    fn get_modded_versions(&self) -> Vec<MinecraftVersion> {
-        // TODO: Реализовать получение модифицированных версий
-        vec![]
     }
 
     pub async fn mark_version_used(&mut self, version_id: String) -> Result<()> {
         let now = Utc::now();
+        
+        // Обновляем время последнего использования
         self.history.last_used.insert(version_id.clone(), now);
         
-        // Обновляем список недавно использованных версий
-        if let Some(index) = self.history.recent_versions.iter().position(|x| x == &version_id) {
-            self.history.recent_versions.remove(index);
-        }
-        self.history.recent_versions.push_front(version_id);
-        
-        // Ограничиваем количество недавних версий
-        while self.history.recent_versions.len() > RECENT_VERSIONS_LIMIT {
-            self.history.recent_versions.pop_back();
+        // Добавляем в список недавних версий, если его там нет
+        if !self.history.recent_versions.contains(&version_id) {
+            self.history.recent_versions.push(version_id);
+            // Оставляем только последние 5 версий
+            if self.history.recent_versions.len() > 5 {
+                self.history.recent_versions.remove(0);
+            }
         }
         
         self.save_history().await?;
