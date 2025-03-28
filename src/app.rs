@@ -1,9 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use ratatui::widgets::ListState;
 use chrono::{DateTime, Local};
-use anyhow::Result;
-use crossterm::event::KeyEvent;
-use crate::{Profile, VersionManager, JavaManager};
 
 #[derive(Debug, Clone)]
 pub struct MinecraftVersion {
@@ -29,11 +26,7 @@ pub enum Language {
     English,
 }
 
-pub enum Focus {
-    Menu,
-    Input,
-}
-
+#[derive(PartialEq)]
 pub enum AppState {
     MainMenu,
     VersionSelect,
@@ -41,6 +34,13 @@ pub enum AppState {
     ProfileEdit,
     Settings,
     Changelog,
+}
+
+#[derive(PartialEq)]
+pub enum Focus {
+    Menu,
+    Input,
+    List,
 }
 
 pub const MANGO_ART: &[&str] = &[
@@ -99,7 +99,7 @@ pub struct App {
     pub versions: VecDeque<MinecraftVersion>,
     pub state: ListState,
     pub current_state: AppState,
-    pub language: String,
+    pub language: Language,
     pub profiles: HashMap<String, Profile>,
     pub current_profile: Option<String>,
     pub loading: bool,
@@ -108,9 +108,6 @@ pub struct App {
     pub current_motd: String,
     pub art_rotation: f32,
     pub settings: Settings,
-    pub version_manager: VersionManager,
-    pub java_manager: JavaManager,
-    pub motd_rotation: u8,
 }
 
 impl App {
@@ -135,136 +132,84 @@ impl App {
             versions: VecDeque::new(),
             state,
             current_state: AppState::MainMenu,
-            language: String::from("ru"),
+            language: Language::Russian,
             profiles,
             current_profile: Some("Default".to_string()),
             loading: false,
-            focus: Focus::Menu,
+            focus: Focus::List,
             last_motd_update: Local::now(),
             current_motd: MOTDS[0].to_string(),
             art_rotation: 0.0,
             settings: Settings::default(),
-            version_manager: VersionManager::new(),
-            java_manager: JavaManager::new(),
-            motd_rotation: 0,
         };
         app.update_motd();
         app
     }
 
-    pub async fn init(&mut self) -> Result<()> {
-        self.version_manager.init().await?;
-        self.java_manager.init().await?;
-        self.update_motd();
-        Ok(())
-    }
-
     pub fn next(&mut self) {
-        let len = match self.current_state {
-            AppState::MainMenu => 5,
-            AppState::VersionSelect => self.versions.len(),
-            AppState::ProfileSelect => self.profiles.len(),
-            AppState::ProfileEdit => 0,
-            AppState::Settings => 3,
-            AppState::Changelog => 0,
-        };
-
-        if len == 0 {
-            return;
-        }
-
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= len - 1 {
-                    0
-                } else {
-                    i + 1
+        match self.current_state {
+            AppState::MainMenu | AppState::VersionSelect | AppState::ProfileSelect => {
+                if let Some(selected) = self.state.selected() {
+                    let max = match self.current_state {
+                        AppState::MainMenu => 3,
+                        AppState::VersionSelect => self.versions.len().saturating_sub(1),
+                        AppState::ProfileSelect => self.profiles.len().saturating_sub(1),
+                        _ => 0,
+                    };
+                    if selected < max {
+                        self.state.select(Some(selected + 1));
+                    }
                 }
             }
-            None => 0,
-        };
-        self.state.select(Some(i));
+            AppState::ProfileEdit => {
+                self.focus = Focus::Input;
+            }
+            _ => {}
+        }
     }
 
     pub fn previous(&mut self) {
-        let len = match self.current_state {
-            AppState::MainMenu => 5,
-            AppState::VersionSelect => self.versions.len(),
-            AppState::ProfileSelect => self.profiles.len(),
-            AppState::ProfileEdit => 0,
-            AppState::Settings => 3,
-            AppState::Changelog => 0,
-        };
-
-        if len == 0 {
-            return;
-        }
-
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    len - 1
-                } else {
-                    i - 1
+        match self.current_state {
+            AppState::MainMenu | AppState::VersionSelect | AppState::ProfileSelect => {
+                if let Some(selected) = self.state.selected() {
+                    if selected > 0 {
+                        self.state.select(Some(selected - 1));
+                    }
                 }
             }
-            None => 0,
-        };
-        self.state.select(Some(i));
+            AppState::ProfileEdit => {
+                self.focus = Focus::Menu;
+            }
+            _ => {}
+        }
     }
 
     pub fn toggle_language(&mut self) {
-        self.language = if self.language == "ru" {
-            String::from("en")
-        } else {
-            String::from("ru")
+        self.language = match self.language {
+            Language::Russian => Language::English,
+            Language::English => Language::Russian,
         };
-        self.settings.language = match self.language.as_str() {
-            "ru" => Language::Russian,
-            "en" => Language::English,
-            _ => panic!("Unknown language"),
-        };
-        self.update_motd();
+        self.settings.language = self.language.clone();
     }
 
     pub fn toggle_focus(&mut self) {
-        self.focus = match self.focus {
-            Focus::Menu => Focus::Input,
-            Focus::Input => Focus::Menu,
-        };
+        if self.current_state == AppState::ProfileEdit {
+            self.focus = match self.focus {
+                Focus::Menu => Focus::Input,
+                Focus::Input => Focus::Menu,
+                Focus::List => Focus::Menu,
+            };
+        }
     }
 
     pub fn update_motd(&mut self) {
-        let motds = if self.language == "ru" {
-            vec![
-                "Манго - это вкусно!",
-                "Самый сочный лаунчер",
-                "Спелый и сладкий",
-                "Витамин C для вашего Minecraft",
-                "Тропический вкус игры",
-                "Сделано с любовью к манго",
-                "Манго - король фруктов",
-                "Сочная оптимизация",
-                "Свежий взгляд на Minecraft",
-                "Экзотический лаунчер",
-            ]
-        } else {
-            vec![
-                "Mango is delicious!",
-                "The juiciest launcher",
-                "Ripe and sweet",
-                "Vitamin C for your Minecraft",
-                "Tropical taste of gaming",
-                "Made with mango love",
-                "Mango - king of fruits",
-                "Juicy optimization",
-                "Fresh look at Minecraft",
-                "Exotic launcher",
-            ]
-        };
-
-        let index = (self.motd_rotation as usize) % motds.len();
-        self.current_motd = motds[index].to_string();
+        let now = Local::now();
+        if (now - self.last_motd_update).num_days() >= 1 {
+            use rand::seq::SliceRandom;
+            let mut rng = rand::thread_rng();
+            self.current_motd = MOTDS.choose(&mut rng).unwrap().to_string();
+            self.last_motd_update = now;
+        }
     }
 
     pub fn rotate_art(&mut self) {
@@ -272,8 +217,6 @@ impl App {
         if self.art_rotation >= 360.0 {
             self.art_rotation = 0.0;
         }
-        self.motd_rotation = self.motd_rotation.wrapping_add(1);
-        self.update_motd();
     }
 
     pub fn adjust_left_panel(&mut self, increase: bool) {

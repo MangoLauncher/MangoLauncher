@@ -9,120 +9,230 @@ use ratatui::{
 use crate::app::{App, AppState, Focus, Language, MANGO_ART};
 
 pub fn draw(f: &mut Frame, app: &mut App) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
+    // Разделяем экран на левую и правую части
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .margin(1)
         .constraints([
-            Constraint::Length(3),
-            Constraint::Min(0),
+            Constraint::Ratio(1, 3),  // Левая треть экрана
+            Constraint::Ratio(2, 3),  // Правая часть для основного контента
         ])
         .split(f.size());
 
-    draw_header(f, app, chunks[0]);
-    draw_content(f, app, chunks[1]);
-}
-
-fn draw_header(f: &mut Frame, app: &App, area: Rect) {
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
+    // Левая часть - ASCII и MOTD
+    let left_chunks = Layout::default()
+        .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(40),
-            Constraint::Min(0),
+            Constraint::Min(0),      // ASCII арт
+            Constraint::Length(3),   // MOTD
         ])
-        .split(area);
+        .split(main_chunks[0]);
 
-    let art = Paragraph::new(app.current_motd.as_str())
-        .block(Block::default().borders(Borders::ALL))
-        .style(Style::default().fg(Color::Yellow));
-    f.render_widget(art, chunks[0]);
+    // ASCII арт с эффектом вращения
+    let art = Paragraph::new(MANGO_ART.join("\n"))
+        .style(Style::default().fg(Color::Yellow))
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::NONE));
+    f.render_widget(art, left_chunks[0]);
 
-    let title = Paragraph::new("Mango Launcher")
-        .block(Block::default().borders(Borders::ALL))
-        .style(Style::default().fg(Color::Green));
-    f.render_widget(title, chunks[1]);
-}
+    // MOTD
+    let motd = Paragraph::new(app.current_motd.as_str())
+        .style(Style::default().fg(Color::Cyan))
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::NONE));
+    f.render_widget(motd, left_chunks[1]);
 
-fn draw_content(f: &mut Frame, app: &mut App, area: Rect) {
+    // Правая часть - основной контент и футер
+    let right_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),     // Основной контент
+            Constraint::Length(3),  // Футер с управлением
+        ])
+        .split(main_chunks[1]);
+
+    // Основной контент
     match app.current_state {
-        AppState::MainMenu => draw_main_menu(f, app, area),
-        AppState::VersionSelect => draw_version_select(f, app, area),
-        AppState::ProfileSelect => draw_profile_select(f, app, area),
-        AppState::ProfileEdit => draw_profile_edit(f, app, area),
-        AppState::Settings => draw_settings(f, app, area),
-        AppState::Changelog => draw_changelog(f, app, area),
+        AppState::MainMenu => draw_main_menu(f, app, right_chunks[0]),
+        AppState::VersionSelect => draw_version_select(f, app, right_chunks[0]),
+        AppState::ProfileSelect => draw_profile_select(f, app, right_chunks[0]),
+        AppState::ProfileEdit => draw_profile_edit(f, app, right_chunks[0]),
+        AppState::Settings => draw_settings(f, app, right_chunks[0]),
+        AppState::Changelog => draw_changelog(f, app, right_chunks[0]),
     }
+
+    // Footer with controls
+    let controls = match app.current_state {
+        AppState::MainMenu => {
+            if app.settings.language == Language::Russian {
+                "↑↓: Навигация | Tab: Переключение | Enter: Выбрать | L: Язык | Esc: Выход"
+            } else {
+                "↑↓: Navigate | Tab: Switch | Enter: Select | L: Language | Esc: Exit"
+            }
+        }
+        AppState::VersionSelect => {
+            if app.settings.language == Language::Russian {
+                "↑↓: Навигация | Enter: Установить | Esc: Назад"
+            } else {
+                "↑↓: Navigate | Enter: Install | Esc: Back"
+            }
+        }
+        AppState::ProfileSelect => {
+            if app.settings.language == Language::Russian {
+                "↑↓: Навигация | Enter: Редактировать | Esc: Назад"
+            } else {
+                "↑↓: Navigate | Enter: Edit | Esc: Back"
+            }
+        }
+        AppState::ProfileEdit => {
+            if app.settings.language == Language::Russian {
+                "Введите имя пользователя | Esc: Сохранить и выйти"
+            } else {
+                "Enter username | Esc: Save and exit"
+            }
+        }
+        AppState::Settings => {
+            if app.settings.language == Language::Russian {
+                "L: Язык | ←/→: Размер панели | Esc: Назад"
+            } else {
+                "L: Language | ←/→: Panel size | Esc: Back"
+            }
+        }
+        AppState::Changelog => {
+            if app.settings.language == Language::Russian {
+                "Esc: Назад"
+            } else {
+                "Esc: Back"
+            }
+        }
+    };
+
+    let footer = Paragraph::new(controls)
+        .style(Style::default().fg(Color::White))
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL));
+    f.render_widget(footer, right_chunks[1]);
 }
 
 fn draw_main_menu(f: &mut Frame, app: &mut App, area: Rect) {
-    let items = vec![
-        ListItem::new("Launch Game"),
-        ListItem::new("Select Version"),
-        ListItem::new("Select Profile"),
-        ListItem::new("Settings"),
-        ListItem::new("Changelog"),
-    ];
+    let menu_items = if app.settings.language == Language::Russian {
+        vec![
+            "Выбрать версию",
+            "Профили",
+            "Настройки",
+            "Чейнджлог",
+            "Запустить игру",
+        ]
+    } else {
+        vec![
+            "Select Version",
+            "Profiles",
+            "Settings",
+            "Changelog",
+            "Play Game",
+        ]
+    };
 
-    let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Main Menu"))
-        .highlight_style(Style::default().fg(Color::Yellow))
+    let items: Vec<ListItem> = menu_items
+        .iter()
+        .map(|&i| ListItem::new(i.to_string()))
+        .collect();
+
+    let menu = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title(if app.language == Language::Russian {
+            "Главное меню"
+        } else {
+            "Main Menu"
+        }))
+        .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
         .highlight_symbol("> ");
 
-    f.render_stateful_widget(list, area, &mut app.state);
+    f.render_stateful_widget(menu, area, &mut app.state);
 }
 
 fn draw_version_select(f: &mut Frame, app: &App, area: Rect) {
     let versions = app.version_manager.get_current_versions();
+    
     let items: Vec<ListItem> = versions
         .iter()
         .map(|version| {
-            let title = match &version.r#type {
+            let title = match &version.version_type {
                 VersionType::Vanilla => version.id.clone(),
                 VersionType::Forge(forge_ver) => format!("{} (Forge {})", version.id, forge_ver),
                 VersionType::OptiFine(opti_ver) => format!("{} (OptiFine {})", version.id, opti_ver),
                 VersionType::ForgeOptiFine { forge, optifine } => {
-                    format!("{} (Forge {}, OptiFine {})", version.id, forge, optifine)
+                    format!("{} (Forge {} + OptiFine {})", version.id, forge, optifine)
                 }
             };
-            let status = if version.installed {
-                "✓"
+
+            let status = if app.version_manager.is_version_installed(&version.id) {
+                "✓ "
             } else {
-                "✗"
+                "  "
             };
-            ListItem::new(format!("{} {}", title, status))
+
+            ListItem::new(format!("{}{}", status, title))
+                .style(Style::default().fg(match version.release_type.as_str() {
+                    "release" => Color::Green,
+                    "snapshot" => Color::Yellow,
+                    _ => Color::White,
+                }))
         })
         .collect();
 
     let view_title = match app.version_manager.current_view {
-        VersionView::Recent => "Recent Versions",
-        VersionView::All => "All Versions",
-        VersionView::Modded => "Modded Versions",
+        VersionView::Recent => {
+            if app.settings.language == Language::Russian {
+                "Недавние версии"
+            } else {
+                "Recent Versions"
+            }
+        }
+        VersionView::All => {
+            if app.settings.language == Language::Russian {
+                "Все версии"
+            } else {
+                "All Versions"
+            }
+        }
+        VersionView::Modded => {
+            if app.settings.language == Language::Russian {
+                "Модифицированные версии"
+            } else {
+                "Modded Versions"
+            }
+        }
     };
 
-    let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title(view_title))
-        .highlight_style(Style::default().fg(Color::Yellow))
-        .highlight_symbol("> ");
+    let versions_list = List::new(items)
+        .block(Block::default()
+            .title(view_title)
+            .borders(Borders::ALL))
+        .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
 
-    f.render_stateful_widget(list, area, &mut app.state.clone());
+    f.render_stateful_widget(versions_list, area, &mut app.state.clone());
 }
 
 fn draw_profile_select(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.profiles
+    let profiles: Vec<ListItem> = app
+        .profiles
         .iter()
         .map(|(name, profile)| {
-            let version = profile.selected_version
-                .as_ref()
-                .map(|v| format!(" ({})", v))
-                .unwrap_or_default();
-            ListItem::new(format!("{}{}", name, version))
+            ListItem::new(format!("{} ({})", name, profile.username))
+                .style(Style::default().fg(Color::White))
         })
         .collect();
 
-    let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Select Profile"))
-        .highlight_style(Style::default().fg(Color::Yellow))
+    let profiles = List::new(profiles)
+        .block(Block::default().borders(Borders::ALL).title(if app.language == Language::Russian {
+            "Профили"
+        } else {
+            "Profiles"
+        }))
+        .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
         .highlight_symbol("> ");
 
-    f.render_stateful_widget(list, area, &mut app.state.clone());
+    f.render_stateful_widget(profiles, area, &mut app.state);
 }
 
 fn draw_profile_edit(f: &mut Frame, app: &mut App, area: Rect) {
@@ -132,73 +242,130 @@ fn draw_profile_edit(f: &mut Frame, app: &mut App, area: Rect) {
             Constraint::Length(3),
             Constraint::Length(3),
             Constraint::Length(3),
-            Constraint::Min(0),
         ])
         .split(area);
 
-    let username = if let Some(profile) = app.profiles.get(app.current_profile.as_deref().unwrap_or("")) {
-        &profile.username
-    } else {
-        ""
-    };
+    let profile = app.current_profile.as_ref().and_then(|name| app.profiles.get(name)).unwrap();
 
-    let input = Paragraph::new(username)
-        .block(Block::default().borders(Borders::ALL).title("Username"))
-        .style(match app.focus {
-            Focus::Input => Style::default().fg(Color::Yellow),
-            _ => Style::default(),
-        });
+    let username = Paragraph::new(format!(
+        "{}: {}",
+        if app.language == Language::Russian {
+            "Имя пользователя"
+        } else {
+            "Username"
+        },
+        profile.username
+    ))
+    .block(Block::default().borders(Borders::ALL).style(match app.focus {
+        Focus::Input => Style::default().fg(Color::Yellow),
+        _ => Style::default(),
+    }));
 
-    f.render_widget(input, chunks[0]);
+    let ram = Paragraph::new(format!(
+        "{}: {}",
+        if app.language == Language::Russian {
+            "Память"
+        } else {
+            "RAM"
+        },
+        profile.ram
+    ))
+    .block(Block::default().borders(Borders::ALL));
+
+    let java_args = Paragraph::new(format!(
+        "{}: {}",
+        if app.language == Language::Russian {
+            "Аргументы Java"
+        } else {
+            "Java Arguments"
+        },
+        profile.java_args
+    ))
+    .block(Block::default().borders(Borders::ALL));
+
+    f.render_widget(username, chunks[0]);
+    f.render_widget(ram, chunks[1]);
+    f.render_widget(java_args, chunks[2]);
 }
 
 fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
-    let items = vec![
-        ListItem::new("Language"),
-        ListItem::new("Java Settings"),
-        ListItem::new("Interface"),
-    ];
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Length(3),
+        ])
+        .split(area);
 
-    let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Settings"))
-        .highlight_style(Style::default().fg(Color::Yellow))
-        .highlight_symbol("> ");
+    let language = Paragraph::new(format!(
+        "{}: {} (L)",
+        if app.settings.language == Language::Russian {
+            "Язык"
+        } else {
+            "Language"
+        },
+        if app.settings.language == Language::Russian {
+            "Русский"
+        } else {
+            "English"
+        }
+    ))
+    .block(Block::default().borders(Borders::ALL));
 
-    f.render_stateful_widget(list, area, &mut app.state.clone());
+    let panel_width = Paragraph::new(format!(
+        "{}: {} ({}/{})",
+        if app.settings.language == Language::Russian {
+            "Ширина левой панели"
+        } else {
+            "Left Panel Width"
+        },
+        app.settings.left_panel_width,
+        if app.settings.language == Language::Russian {
+            "←/→"
+        } else {
+            "Left/Right"
+        },
+        if app.settings.language == Language::Russian {
+            "стрелки"
+        } else {
+            "arrows"
+        }
+    ))
+    .block(Block::default().borders(Borders::ALL));
+
+    f.render_widget(language, chunks[0]);
+    f.render_widget(panel_width, chunks[1]);
 }
 
 fn draw_changelog(f: &mut Frame, app: &App, area: Rect) {
-    let text = if app.language == "ru" {
+    let changelog = if app.language == Language::Russian {
         vec![
-            "Версия 0.1.0:",
-            "- Первый релиз",
-            "- Поддержка ванильных версий",
-            "- Система профилей",
-            "- Двуязычный интерфейс",
-            "",
-            "Планы на будущее:",
-            "- Поддержка Forge и OptiFine",
-            "- Управление модами",
-            "- Улучшенная производительность",
+            "v0.1.0:",
+            "  - Базовый интерфейс",
+            "  - Поддержка русского и английского языков",
+            "  - Навигация по меню",
+            "  - Улучшенное управление (Tab, стрелки)",
+            "  - ASCII-арт и MOTD",
+            "  - Система профилей",
         ]
     } else {
         vec![
-            "Version 0.1.0:",
-            "- Initial release",
-            "- Vanilla version support",
-            "- Profile system",
-            "- Bilingual interface",
-            "",
-            "Future plans:",
-            "- Forge and OptiFine support",
-            "- Mod management",
-            "- Performance improvements",
+            "v0.1.0:",
+            "  - Basic interface",
+            "  - Russian and English language support",
+            "  - Menu navigation",
+            "  - Improved controls (Tab, arrows)",
+            "  - ASCII art and MOTD",
+            "  - Profile system",
         ]
     };
 
-    let changelog = Paragraph::new(text.join("\n"))
-        .block(Block::default().borders(Borders::ALL).title("Changelog"))
-        .wrap(Wrap { trim: true });
+    let changelog = Paragraph::new(changelog.join("\n"))
+        .block(Block::default().borders(Borders::ALL).title(if app.language == Language::Russian {
+            "История изменений"
+        } else {
+            "Changelog"
+        }));
 
     f.render_widget(changelog, area);
 }
