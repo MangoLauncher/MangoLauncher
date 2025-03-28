@@ -23,3 +23,13 @@ Cargo.lock
 
 # Minecraft specific
 .minecraft/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Project specific
+/profiles/
+/versions/
+/assets/
+*.log

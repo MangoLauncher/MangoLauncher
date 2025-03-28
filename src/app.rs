@@ -20,7 +20,7 @@ pub struct Profile {
     pub java_args: String,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Language {
     Russian,
     English,
@@ -44,13 +44,21 @@ pub enum Focus {
 }
 
 pub const MANGO_ART: &[&str] = &[
-    r"     ,,,",
-    r"   ,'   `.",
-    r"  /       \",
-    r" |  Mango |",
-    r"  \       /",
-    r"   `.   ,'",
-    r"     ```",
+    r"    ╔══════════════════╗    ",
+    r"    ║   ,,,,,,,,,,,,   ║    ",
+    r"    ║ ,'          '. ║    ",
+    r"    ║/    ______    \║    ",
+    r"    ║    /      \    ║    ",
+    r"    ║   |  MANGO |   ║    ",
+    r"    ║    \      /    ║    ",
+    r"    ║     '....'     ║    ",
+    r"    ║   ╭──────╮   ║    ",
+    r"    ║   │ 🥭  │   ║    ",
+    r"    ║   ╰──────╯   ║    ",
+    r"    ╚══════════════════╝    ",
+    r"",
+    r"     MANGO LAUNCHER     ",
+    r"    ═══════════════    ",
 ];
 
 pub const MOTDS: &[&str] = &[
@@ -181,7 +189,7 @@ impl App {
             Language::Russian => Language::English,
             Language::English => Language::Russian,
         };
-        self.settings.language = self.language;
+        self.settings.language = self.language.clone();
     }
 
     pub fn toggle_focus(&mut self) {
@@ -189,6 +197,7 @@ impl App {
             self.focus = match self.focus {
                 Focus::Menu => Focus::Input,
                 Focus::Input => Focus::Menu,
+                Focus::List => Focus::Menu,
             };
         }
     }

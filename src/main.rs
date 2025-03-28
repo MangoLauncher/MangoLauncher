@@ -135,6 +135,9 @@ fn handle_enter(app: &mut App) {
         AppState::ProfileEdit => {
             app.current_state = AppState::MainMenu;
         }
+        AppState::Settings => {
+            // В настройках Enter не используется
+        }
         AppState::Changelog => {}
     }
 }
@@ -142,7 +145,7 @@ fn handle_enter(app: &mut App) {
 fn handle_escape(app: &mut App) {
     match app.current_state {
         AppState::MainMenu => {}
-        AppState::VersionSelect | AppState::ProfileSelect | AppState::ProfileEdit | AppState::Changelog => {
+        AppState::VersionSelect | AppState::ProfileSelect | AppState::ProfileEdit | AppState::Settings | AppState::Changelog => {
             app.current_state = AppState::MainMenu;
             app.state.select(Some(0));
             app.focus = Focus::Menu;
