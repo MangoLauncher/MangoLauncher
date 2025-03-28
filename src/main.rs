@@ -93,7 +93,6 @@ fn handle_key_event(key_event: KeyEvent, app: &mut App) -> io::Result<()> {
         return Ok(());
     }
 
-    // Обработка остальных состояний
     match key_event.code {
         KeyCode::Char('l') | KeyCode::Char('L') => {
             app.toggle_language();
@@ -108,9 +107,16 @@ fn handle_key_event(key_event: KeyEvent, app: &mut App) -> io::Result<()> {
                 app.adjust_left_panel(true);
             }
         }
+        KeyCode::Tab => {
+            if app.current_state == AppState::VersionSelect {
+                app.version_manager.toggle_view();
+                app.state.select(Some(0));
+            } else {
+                app.toggle_focus();
+            }
+        }
         KeyCode::Up | KeyCode::Char('k') => app.previous(),
         KeyCode::Down | KeyCode::Char('j') => app.next(),
-        KeyCode::Tab => app.toggle_focus(),
         KeyCode::Enter => handle_enter(app),
         KeyCode::Esc => handle_escape(app),
         _ => {}
@@ -163,10 +169,17 @@ fn handle_enter(app: &mut App) {
         }
         AppState::VersionSelect => {
             if let Some(selected) = app.state.selected() {
-                if let Some(version) = app.versions.get(selected) {
+                let versions = app.version_manager.get_current_versions();
+                if let Some(version) = versions.get(selected) {
                     if let Some(profile) = app.current_profile.as_ref() {
                         if let Some(profile) = app.profiles.get_mut(profile) {
                             profile.selected_version = Some(version.id.clone());
+                            // Отмечаем версию как использованную
+                            tokio::spawn(async move {
+                                if let Err(e) = app.version_manager.mark_version_used(version.id.clone()).await {
+                                    eprintln!("Failed to mark version as used: {}", e);
+                                }
+                            });
                             app.current_state = AppState::MainMenu;
                         }
                     }

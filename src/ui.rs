@@ -150,26 +150,67 @@ fn draw_main_menu(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(menu, area, &mut app.state);
 }
 
-fn draw_version_select(f: &mut Frame, app: &mut App, area: Rect) {
-    let versions: Vec<ListItem> = app
-        .versions
+fn draw_version_select(f: &mut Frame, app: &App, area: Rect) {
+    let versions = app.version_manager.get_current_versions();
+    
+    let items: Vec<ListItem> = versions
         .iter()
-        .map(|v| {
-            ListItem::new(format!("{} ({})", v.id, v.r#type))
-                .style(Style::default().fg(Color::White))
+        .map(|version| {
+            let title = match &version.version_type {
+                VersionType::Vanilla => version.id.clone(),
+                VersionType::Forge(forge_ver) => format!("{} (Forge {})", version.id, forge_ver),
+                VersionType::OptiFine(opti_ver) => format!("{} (OptiFine {})", version.id, opti_ver),
+                VersionType::ForgeOptiFine { forge, optifine } => {
+                    format!("{} (Forge {} + OptiFine {})", version.id, forge, optifine)
+                }
+            };
+
+            let status = if app.version_manager.is_version_installed(&version.id) {
+                "✓ "
+            } else {
+                "  "
+            };
+
+            ListItem::new(format!("{}{}", status, title))
+                .style(Style::default().fg(match version.release_type.as_str() {
+                    "release" => Color::Green,
+                    "snapshot" => Color::Yellow,
+                    _ => Color::White,
+                }))
         })
         .collect();
 
-    let versions = List::new(versions)
-        .block(Block::default().borders(Borders::ALL).title(if app.language == Language::Russian {
-            "Версии"
-        } else {
-            "Versions"
-        }))
-        .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
-        .highlight_symbol("> ");
+    let view_title = match app.version_manager.current_view {
+        VersionView::Recent => {
+            if app.settings.language == Language::Russian {
+                "Недавние версии"
+            } else {
+                "Recent Versions"
+            }
+        }
+        VersionView::All => {
+            if app.settings.language == Language::Russian {
+                "Все версии"
+            } else {
+                "All Versions"
+            }
+        }
+        VersionView::Modded => {
+            if app.settings.language == Language::Russian {
+                "Модифицированные версии"
+            } else {
+                "Modded Versions"
+            }
+        }
+    };
 
-    f.render_stateful_widget(versions, area, &mut app.state);
+    let versions_list = List::new(items)
+        .block(Block::default()
+            .title(view_title)
+            .borders(Borders::ALL))
+        .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+
+    f.render_stateful_widget(versions_list, area, &mut app.state.clone());
 }
 
 fn draw_profile_select(f: &mut Frame, app: &mut App, area: Rect) {

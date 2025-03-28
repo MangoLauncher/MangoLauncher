@@ -1,6 +1,107 @@
 # Mango Launcher
 
-A modern, open-source Minecraft launcher written in Rust with a beautiful terminal user interface.
+A modern Minecraft launcher with mod support and performance optimization.
+
+[Русская версия](docs/locales/README.ru.md)
+
+## Installation
+
+### Download
+
+1. Download the latest version from [GitHub Releases](https://github.com/MangoLauncher/MangoLauncher/releases)
+2. Extract the archive to a convenient location
+
+### First Launch
+
+On first launch, the launcher will create the following structure:
+
+```
+mangoenv/
+├── .minecraft/          # Game files and versions
+├── java/               # Installed Java versions
+│   ├── java-8/        # Java 8 for older versions
+│   ├── java-17/       # Java 17 for newer versions
+│   └── java-20/       # Java 20 for snapshots
+├── versions/           # Version and manifest cache
+├── profiles/           # User profiles
+└── launcher.log        # Launcher log
+```
+
+### Requirements
+
+- **Operating System:**
+  - Windows 10/11
+  - macOS 10.15+
+  - Linux (with glibc 2.31+)
+
+- **Java:**
+  - The launcher will automatically download the required Java version
+  - Supported versions:
+    - Java 8 (for versions up to 1.16)
+    - Java 17 (for versions 1.17+)
+    - Java 20 (for some snapshots)
+
+- **Disk Space:**
+  - Minimum 1 GB for launcher and base version
+  - Recommended 4+ GB for mods and multiple versions
+
+## Usage
+
+### Main Features
+
+1. **Version Management:**
+   - Tab to switch between version lists
+   - Vanilla version support
+   - Forge and OptiFine support (coming soon)
+   - Recently used versions history
+
+2. **Profiles:**
+   - Multiple profile creation
+   - Memory and Java arguments configuration
+   - Per-version settings
+
+3. **Settings:**
+   - Language selection (English/Russian)
+   - Interface customization
+   - Java environment management
+
+### Hotkeys
+
+- `↑/↓` or `j/k` - Menu navigation
+- `Tab` - Switch between elements/version lists
+- `Enter` - Select
+- `Esc` - Back/Exit
+- `L` - Toggle language
+
+## Troubleshooting
+
+### Java Not Found
+
+If you get an error about Java not being found:
+1. The launcher will automatically offer to download the required version
+2. You can specify the path to an already installed Java in settings
+
+### Launch Issues
+
+1. Check the `mangoenv/launcher.log` file
+2. Ensure you have enough free disk space
+3. Check permissions for the `mangoenv` directory
+
+## Development
+
+### Building from Source
+
+```bash
+git clone https://github.com/yourusername/mango-launcher.git
+cd mango-launcher
+cargo build --release
+```
+
+### Development Dependencies
+
+- Rust 1.75+
+- Cargo
+- Git
 
 ## Features
 
@@ -11,48 +112,6 @@ A modern, open-source Minecraft launcher written in Rust with a beautiful termin
 - Version management
 - Profile support
 - Mod support (planned)
-
-## Requirements
-
-- Rust 1.75 or higher
-- Cargo (comes with Rust)
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/mango-launcher.git
-cd mango-launcher
-```
-
-2. Build the project:
-```bash
-cargo build --release
-```
-
-3. Run the launcher:
-```bash
-cargo run --release
-```
-
-## Development
-
-To set up the development environment:
-
-1. Install Rust:
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-2. Run tests:
-```bash
-cargo test
-```
-
-3. Format code:
-```bash
-cargo fmt
-```
 
 ## License
 
