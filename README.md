@@ -1,118 +1,161 @@
-# Mango Launcher
+# MangoLauncher
 
-A modern Minecraft launcher with mod support and performance optimization.
+⚠️ **EXPERIMENTAL SOFTWARE** - This launcher is in early development stage and is highly experimental. Use at your own risk!
 
-[Русская версия](docs/locales/README.ru.md)
-
-## Installation
-
-### Download
-
-1. Download the latest version from [GitHub Releases](https://github.com/MangoLauncher/MangoLauncher/releases)
-2. Extract the archive to a convenient location
-
-### First Launch
-
-On first launch, the launcher will create the following structure:
-
-```
-mangoenv/
-├── .minecraft/          # Game files and versions
-├── java/               # Installed Java versions
-│   ├── java-8/        # Java 8 for older versions
-│   ├── java-17/       # Java 17 for newer versions
-│   └── java-20/       # Java 20 for snapshots
-├── versions/           # Version and manifest cache
-├── profiles/           # User profiles
-└── launcher.log        # Launcher log
-```
-
-### Requirements
-
-- **Operating System:**
-  - Windows 10/11
-  - macOS 10.15+
-  - Linux (with glibc 2.31+)
-
-- **Java:**
-  - The launcher will automatically download the required Java version
-  - Supported versions:
-    - Java 8 (for versions up to 1.16)
-    - Java 17 (for versions 1.17+)
-    - Java 20 (for some snapshots)
-
-- **Disk Space:**
-  - Minimum 1 GB for launcher and base version
-  - Recommended 4+ GB for mods and multiple versions
-
-## Usage
-
-### Main Features
-
-1. **Version Management:**
-   - Tab to switch between version lists
-   - Vanilla version support
-   - Forge and OptiFine support (coming soon)
-   - Recently used versions history
-
-2. **Profiles:**
-   - Multiple profile creation
-   - Memory and Java arguments configuration
-   - Per-version settings
-
-3. **Settings:**
-   - Language selection (English/Russian)
-   - Interface customization
-   - Java environment management
-
-### Hotkeys
-
-- `↑/↓` or `j/k` - Menu navigation
-- `Tab` - Switch between elements/version lists
-- `Enter` - Select
-- `Esc` - Back/Exit
-- `L` - Toggle language
-
-## Troubleshooting
-
-### Java Not Found
-
-If you get an error about Java not being found:
-1. The launcher will automatically offer to download the required version
-2. You can specify the path to an already installed Java in settings
-
-### Launch Issues
-
-1. Check the `mangoenv/launcher.log` file
-2. Ensure you have enough free disk space
-3. Check permissions for the `mangoenv` directory
-
-## Development
-
-### Building from Source
-
-```bash
-git clone https://github.com/yourusername/mango-launcher.git
-cd mango-launcher
-cargo build --release
-```
-
-### Development Dependencies
-
-- Rust 1.75+
-- Cargo
-- Git
+A fast, lightweight Minecraft launcher built in Rust with a terminal user interface (TUI). MangoLauncher provides a clean, efficient way to manage Minecraft versions, accounts, and game instances.
 
 ## Features
 
-- Beautiful TUI using ratatui
-- Fast and memory-efficient
-- Easy configuration through JSON
-- Asynchronous downloads
-- Version management
-- Profile support
-- Mod support (planned)
+- **Terminal User Interface**: Clean, responsive TUI built with ratatui
+- **Multi-threaded Downloads**: Fast parallel downloading of game files
+- **Smart Caching**: Intelligent version manifest caching with automatic updates
+- **Account Management**: Support for offline and Microsoft accounts
+- **Instance Management**: Create and manage multiple game instances
+- **Java Detection**: Automatic Java installation scanning and management
+- **Progress Tracking**: Real-time download progress with cancellation support
+- **Comprehensive Logging**: Detailed logging system for debugging
+- **Cross-platform**: Runs on Windows, macOS, and Linux
+
+## Installation
+
+### Prerequisites
+
+- Rust 1.70+ (latest stable recommended)
+- Java 8+ (for running Minecraft)
+
+### From Source
+
+```bash
+git clone https://github.com/MangoLauncher/MangoLauncher.git
+cd MangoLauncher
+cargo build --release
+```
+
+The binary will be available at `target/release/mango-launcher`.
+
+## Usage
+
+Run the launcher:
+
+```bash
+cargo run
+```
+
+Or use the compiled binary:
+
+```bash
+./target/release/mango-launcher
+```
+
+### Navigation
+
+- **Arrow Keys**: Navigate through menus and lists
+- **Enter**: Select/Download versions, launch instances
+- **Tab**: Switch between different sections
+- **R**: Refresh version lists
+- **F**: Force refresh (bypass cache)
+- **T**: Toggle version display modes
+- **A**: Add new accounts/instances
+- **S**: Access settings
+- **D**: Delete selected item
+- **Esc**: Go back/Exit
+
+### Key Sections
+
+1. **Launcher**: Browse and download Minecraft versions
+2. **Instances**: Manage game instances
+3. **Accounts**: Handle player accounts
+4. **Settings**: Configure Java installations and preferences
+5. **Logs**: View application and game logs
+
+## Architecture
+
+MangoLauncher is built with a modular architecture:
+
+- **UI Layer** (`ui.rs`): TUI interface using ratatui
+- **App Layer** (`app.rs`): Application state management
+- **Network Layer** (`network.rs`): HTTP client with progress tracking
+- **Version Management** (`version.rs`): Minecraft version handling
+- **Auth System** (`auth.rs`): Account management
+- **Launch System** (`launch.rs`): Game launching and process management
+- **Java Detection** (`java.rs`): Java installation discovery
+- **Logging** (`logs.rs`): Comprehensive logging system
+
+## Configuration
+
+The launcher stores its data in:
+
+- **Linux/macOS**: `~/.config/mango-launcher/`
+- **Windows**: `%APPDATA%\mango-launcher\`
+
+Configuration includes:
+- Game versions and instances
+- Account information
+- Java installations
+- Application settings
+- Logs
+
+## Development Status
+
+⚠️ **This launcher is experimental** and includes:
+
+- Basic Minecraft version downloading and launching
+- Account management (offline accounts supported)
+- Instance management
+- Java detection and management
+- Comprehensive logging
+
+### Known Limitations
+
+- Microsoft authentication may need improvements
+- Mod support is limited
+- Some edge cases in version handling
+- UI could be more polished
+
+### Planned Features
+
+- Better mod support (Forge, Fabric)
+- Enhanced Microsoft authentication
+- Instance export/import
+- Custom version support
+- Resource pack management
+
+## Contributing
+
+Contributions are welcome! This is an experimental project, so:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+Please note that the codebase is still evolving rapidly.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Disclaimer
+
+⚠️ **EXPERIMENTAL SOFTWARE WARNING**
+
+This launcher is in active development and is considered experimental. It may:
+- Have bugs that could affect your Minecraft installations
+- Lose configuration data between updates
+- Behave unexpectedly in certain scenarios
+- Not be compatible with all Minecraft versions
+
+Always backup your Minecraft data before using experimental launchers.
+
+## Inspiration
+
+MangoLauncher draws inspiration from existing launchers like PrismLauncher while focusing on:
+- Performance and efficiency
+- Clean, minimal interface
+- Fast operation through Rust's performance
+- Terminal-based workflow for power users
+
+---
+
+**Note**: This launcher is not affiliated with Mojang Studios or Microsoft.
